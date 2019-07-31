@@ -4,6 +4,7 @@ from binascii import hexlify
 import time
 import requests
 import json
+import hashlib
 from nuls import get_private_key, get_address, NulsSignature
 
 DEFAULT_SERVER = "https://apitest.aleph.im"
@@ -63,23 +64,34 @@ def create_aggregate(key, content, address=None,
 
 
 def submit(content, message_type, channel='IOT_TEST',
-           private_key=None, api_server=DEFAULT_SERVER):
+           private_key=None, api_server=DEFAULT_SERVER,
+           inline=True):
 
     if private_key is None:
         private_key = get_private_key()
 
-    ipfs_hash = ipfs_push(content, api_server=api_server)
+    
     message = {
-      'item_hash': ipfs_hash,
+      #'item_hash': ipfs_hash,
       'chain': 'NULS',
       'channel': channel,
       'sender': get_address(private_key=private_key),
       'type': message_type,
       'time': time.time()
     }
+    
+    if inline:
+        message['item_content'] = json.dumps(content, separators=(',',':'))
+        h = hashlib.sha256()
+        h.update(message['item_content'].encode('utf-8'))
+        message['item_hash'] = h.hexdigest()
+    else:
+        message['item_hash'] = ipfs_push(content, api_server=api_server)
+        
     sig = NulsSignature.sign_message(private_key,
                                      get_verification_buffer(message))
     message['signature'] = hexlify(sig.serialize()).decode('utf-8')
+    print(message)
     broadcast(message, api_server=api_server)
     return message
 
