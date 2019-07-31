@@ -91,7 +91,6 @@ def submit(content, message_type, channel='IOT_TEST',
     sig = NulsSignature.sign_message(private_key,
                                      get_verification_buffer(message))
     message['signature'] = hexlify(sig.serialize()).decode('utf-8')
-    print(message)
     broadcast(message, api_server=api_server)
     return message
 
